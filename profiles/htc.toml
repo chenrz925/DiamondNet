@@ -1,0 +1,414 @@
+__schema__ = "tasker.launcher.Launcher"
+__name__ = "DiamondNet on HTC dataset"
+__author__ = "Chen Runze"
+__version__ = "1.0.0"
+__email__ = "chenrz925@bupt.edu.cn"
+__abstract__ = ""
+
+# ----- Global settings -----
+
+[__setting__]
+[__setting__.storage]
+reference = "tasker.storages.pickle.HardPickleStorage$R"
+[__setting__.storage.kwargs]
+id = 'diamond-net-htc'
+[__setting__.log]
+[__setting__.log.console]
+class = 'logging.StreamHandler'
+formatter = 'default'
+level = 'INFO'
+stream = 'ext://sys.stdout'
+[__setting__.log.file]
+class = 'logging.FileHandler'
+formatter = 'default'
+level = 'INFO'
+filename = 'diamond-net-htc.log'
+
+# ----- Task metainfo -----
+
+[[__meta__]]
+reference = 'tasker.tasks.utils.SetEnvironmentTask$T'
+profile = 'env'
+execute = true
+
+[[__meta__]]
+reference = "datasets.htc_tmd.HTCTMDDataLoaderTask$T$train"
+profile = "train_loader"
+execute = false
+
+[[__meta__]]
+reference = "datasets.htc_tmd.HTCTMDDataLoaderTask$T$validate"
+profile = "validate_loader"
+execute = false
+
+[[__meta__]]
+reference = "tasks.DiamondNetCDAETrainTask$T$cdae_a"
+profile = "cdae_a_trainer"
+execute = false
+
+[[__meta__]]
+reference = "tasks.DiamondNetCDAETrainTask$T$cdae_m"
+profile = "cdae_m_trainer"
+execute = false
+
+[[__meta__]]
+reference = "tasks.DiamondNetCDAETrainTask$T$cdae_g"
+profile = "cdae_g_trainer"
+execute = false
+
+[[__meta__]]
+reference = "tasks.DiamondNetGraphTrainTask$T$cdae_a,cdae_m,cdae_g"
+profile = "diamond_trainer"
+execute = true
+
+# ----- Task profiles -----
+
+[env]
+"CUDA_VISIBLE_DEVICES" = "6"
+
+[train_loader]
+sampler_type = "batch_sampler"
+[train_loader.dataset]
+reference = "datasets.htc_tmd.HTCTMDConcatenated$R"
+[train_loader.dataset.kwargs]
+cache_dir = "/public/lhy/crz/repos/waterch-hotchpotch/.tasker/cache/htc_tmd/5_sec"
+num_workers = 8
+slice = '+0.9'
+preprocess = 'robust'
+[[train_loader.dataset.kwargs.label_mapping]]
+name = ['still']
+index = 0
+[[train_loader.dataset.kwargs.label_mapping]]
+name = ['walk']
+index = 1
+[[train_loader.dataset.kwargs.label_mapping]]
+name = ['run']
+index = 2
+[[train_loader.dataset.kwargs.label_mapping]]
+name = ['bicycle']
+index = 3
+[[train_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~motorcycle']
+index = 4
+[[train_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~car']
+index = 5
+[[train_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~bus']
+index = 6
+[[train_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~MRT']
+index = 7
+[[train_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~train']
+index = 8
+[[train_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~HSR']
+index = 9
+[train_loader.loader]
+batch_size = 5120
+shuffle = true
+num_workers = 0
+pin_memory = false
+drop_last = false
+
+[validate_loader]
+sampler_type = "batch_sampler"
+[validate_loader.dataset]
+reference = "datasets.htc_tmd.HTCTMDConcatenated$R"
+[validate_loader.dataset.kwargs]
+cache_dir = "/public/lhy/crz/repos/waterch-hotchpotch/.tasker/cache/htc_tmd/5_sec"
+num_workers = 8
+slice = '-0.1'
+preprocess = 'robust'
+[[validate_loader.dataset.kwargs.label_mapping]]
+name = ['still']
+index = 0
+[[validate_loader.dataset.kwargs.label_mapping]]
+name = ['walk']
+index = 1
+[[validate_loader.dataset.kwargs.label_mapping]]
+name = ['run']
+index = 2
+[[validate_loader.dataset.kwargs.label_mapping]]
+name = ['bicycle']
+index = 3
+[[validate_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~motorcycle']
+index = 4
+[[validate_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~car']
+index = 5
+[[validate_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~bus']
+index = 6
+[[validate_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~MRT']
+index = 7
+[[validate_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~train']
+index = 8
+[[validate_loader.dataset.kwargs.label_mapping]]
+name = ['vehicle~HSR']
+index = 9
+[validate_loader.loader]
+batch_size = 5120
+shuffle = true
+num_workers = 0
+pin_memory = false
+drop_last = false
+
+[cdae_a_trainer]
+device = 'cuda:0'
+non_blocking = true
+deterministic = false
+loss_display = 0.33
+process_features = 'lambda it: it[:\, 0:3\, :]$X'
+compare_by = '-mse'
+max_epochs = 200
+[cdae_a_trainer.model]
+reference = 'models.cdae.ConvAutoEncoder2LayerDeCoSeCoSeCotSeCotSi$R'
+[cdae_a_trainer.model.kwargs]
+in_features = 235
+[[cdae_a_trainer.model.kwargs.conv1d]]
+in_channels = 4
+out_channels = 10
+kernel_size = 5
+stride = 1
+[[cdae_a_trainer.model.kwargs.conv1d]]
+in_channels = 10
+out_channels = 10
+kernel_size = 5
+stride = 2
+[cdae_a_trainer.model.kwargs.maxpool1d]
+kernel_size = 5
+[cdae_a_trainer.model.kwargs.denoise]
+ratio = 0.2
+[cdae_a_trainer.loss_function]
+reference = 'torch.nn.MSELoss$R'
+[cdae_a_trainer.metrics]
+mae = '$M$ignite.metrics.MeanAbsoluteError'
+mse = '$M$ignite.metrics.MeanSquaredError'
+rmse = '$M$ignite.metrics.RootMeanSquaredError'
+[cdae_a_trainer.optimizer]
+reference = "torch.optim.AdamW$R"
+[cdae_a_trainer.optimizer.kwargs]
+lr = 1e-3
+[cdae_a_trainer.optimizer.lr_scheduler]
+reference = 'torch.optim.lr_scheduler.ReduceLROnPlateau$R'
+[cdae_a_trainer.optimizer.lr_scheduler.kwargs]
+patience = 5
+factor = 0.85
+verbose = true
+cooldown = 5
+threshold = 1e-7
+mode = "min"
+min_lr = 1e-4
+
+[cdae_m_trainer]
+device = 'cuda:0'
+non_blocking = true
+deterministic = false
+loss_display = 0.33
+process_features = 'lambda it: it[:\, 3:6\, :]$X'
+compare_by = '-mse'
+max_epochs = 200
+[cdae_m_trainer.model]
+reference = 'models.cdae.ConvAutoEncoder2LayerDeCoSeCoSeCotSeCotSi$R'
+[cdae_m_trainer.model.kwargs]
+in_features = 235
+[[cdae_m_trainer.model.kwargs.conv1d]]
+in_channels = 4
+out_channels = 10
+kernel_size = 5
+stride = 1
+[[cdae_m_trainer.model.kwargs.conv1d]]
+in_channels = 10
+out_channels = 10
+kernel_size = 5
+stride = 2
+[cdae_m_trainer.model.kwargs.maxpool1d]
+kernel_size = 5
+[cdae_m_trainer.model.kwargs.denoise]
+ratio = 0.2
+[cdae_m_trainer.loss_function]
+reference = 'torch.nn.MSELoss$R'
+[cdae_m_trainer.metrics]
+mae = '$M$ignite.metrics.MeanAbsoluteError'
+mse = '$M$ignite.metrics.MeanSquaredError'
+rmse = '$M$ignite.metrics.RootMeanSquaredError'
+[cdae_m_trainer.optimizer]
+reference = "torch.optim.AdamW$R"
+[cdae_m_trainer.optimizer.kwargs]
+lr = 1e-3
+[cdae_m_trainer.optimizer.lr_scheduler]
+reference = 'torch.optim.lr_scheduler.ReduceLROnPlateau$R'
+[cdae_m_trainer.optimizer.lr_scheduler.kwargs]
+patience = 5
+factor = 0.85
+verbose = true
+cooldown = 5
+threshold = 1e-7
+mode = "min"
+min_lr = 1e-4
+
+[cdae_g_trainer]
+device = 'cuda:0'
+non_blocking = true
+deterministic = false
+loss_display = 0.33
+process_features = 'lambda it: it[:\, 6:9\, :]$X'
+compare_by = '-mse'
+max_epochs = 200
+[cdae_g_trainer.model]
+reference = 'models.cdae.ConvAutoEncoder2LayerDeCoSeCoSeCotSeCotSi$R'
+[cdae_g_trainer.model.kwargs]
+in_features = 235
+[[cdae_g_trainer.model.kwargs.conv1d]]
+in_channels = 4
+out_channels = 10
+kernel_size = 5
+stride = 1
+[[cdae_g_trainer.model.kwargs.conv1d]]
+in_channels = 10
+out_channels = 10
+kernel_size = 5
+stride = 2
+[cdae_g_trainer.model.kwargs.maxpool1d]
+kernel_size = 5
+[cdae_g_trainer.model.kwargs.denoise]
+ratio = 0.2
+[cdae_g_trainer.loss_function]
+reference = 'torch.nn.MSELoss$R'
+[cdae_g_trainer.metrics]
+mae = '$M$ignite.metrics.MeanAbsoluteError'
+mse = '$M$ignite.metrics.MeanSquaredError'
+rmse = '$M$ignite.metrics.RootMeanSquaredError'
+[cdae_g_trainer.optimizer]
+reference = "torch.optim.AdamW$R"
+[cdae_g_trainer.optimizer.kwargs]
+lr = 1e-3
+[cdae_g_trainer.optimizer.lr_scheduler]
+reference = 'torch.optim.lr_scheduler.ReduceLROnPlateau$R'
+[cdae_g_trainer.optimizer.lr_scheduler.kwargs]
+patience = 5
+factor = 0.85
+verbose = true
+cooldown = 5
+threshold = 1e-7
+mode = "min"
+min_lr = 1e-4
+
+[diamond_trainer]
+device = 'cuda:0'
+non_blocking = true
+deterministic = false
+loss_display = 0.33
+compare_by = '+accuracy'
+max_epochs = 400
+[diamond_trainer.model]
+[diamond_trainer.model.process_features]
+cdae_a = 'lambda it: it[:\, 0:3\, :]$L'
+cdae_m = 'lambda it: it[:\, 3:6\, :]$L'
+cdae_g = 'lambda it: it[:\, 6:9\, :]$L'
+[diamond_trainer.model.diamond]
+dense = true
+in_features = 235
+class_number = 10
+adaptive_linear_features = 1024
+output_attention = true
+attention_in_channels = 252
+attention_reduction_ratio = 8
+[[diamond_trainer.model.diamond.linear]]
+out_features = 512
+# Spider Layer 1
+[[diamond_trainer.model.diamond.layer]]
+update_reference = 'models.conv.Conv1LayerCoSeBlock$R'
+adjacency_reference = 'models.graph.AdjacencyMatrix$R'
+dense = false
+[diamond_trainer.model.diamond.layer.adjacency]
+vertexes = 3
+model_reference = 'models.attention.SqueezeExcitation$R'
+[diamond_trainer.model.diamond.layer.adjacency.conv]
+out_channels = 16
+kernel_size = 1
+[diamond_trainer.model.diamond.layer.adjacency.squeeze_excitation]
+reference = 'models.attention.SqueezeExcitationSoftmax$R'
+[[diamond_trainer.model.diamond.layer.adjacency.squeeze_excitation.kwargs]]
+in_channels = 16
+reduction_ratio = 2.0
+[[diamond_trainer.model.diamond.layer.adjacency.squeeze_excitation.kwargs]]
+in_channels = 16
+reduction_ratio = 2.0
+[[diamond_trainer.model.diamond.layer.adjacency.squeeze_excitation.kwargs]]
+in_channels = 16
+reduction_ratio = 2.0
+[diamond_trainer.model.diamond.layer.update]
+update_reference = 'models.conv.Conv1LayerCoSeBlock$R'
+vertexes = 3
+[[diamond_trainer.model.diamond.layer.update.conv]]
+in_channels = 16
+growth_ratio = 48
+kernel_size = 3
+[[diamond_trainer.model.diamond.layer.update.conv]]
+in_channels = 16
+growth_ratio = 48
+kernel_size = 3
+[[diamond_trainer.model.diamond.layer.update.conv]]
+in_channels = 16
+growth_ratio = 48
+kernel_size = 3
+# Spider Layer Output
+[[diamond_trainer.model.diamond.layer]]
+update_reference = 'models.conv.Conv1LayerCoSeBlock$R'
+[diamond_trainer.model.diamond.layer.adjacency]
+vertexes = 3
+softmax = true
+model_reference = 'models.attention.SqueezeExcitation$R'
+[[diamond_trainer.model.diamond.layer.adjacency.kwargs]]
+in_channels = 52
+reduction_ratio = 1.5
+[[diamond_trainer.model.diamond.layer.adjacency.kwargs]]
+in_channels = 52
+reduction_ratio = 1.5
+[[diamond_trainer.model.diamond.layer.adjacency.kwargs]]
+in_channels = 52
+reduction_ratio = 1.5
+[diamond_trainer.model.diamond.layer.update]
+vertexes = 3
+update_reference = 'models.conv.Conv1LayerCoSeBlock$R'
+[[diamond_trainer.model.diamond.layer.update.conv]]
+in_channels = 52
+growth_ratio = 32
+kernel_size = 3
+[[diamond_trainer.model.diamond.layer.update.conv]]
+in_channels = 52
+growth_ratio = 32
+kernel_size = 3
+[[diamond_trainer.model.diamond.layer.update.conv]]
+in_channels = 52
+growth_ratio = 32
+kernel_size = 3
+[diamond_trainer.loss_function]
+reference = 'torch.nn.CrossEntropyLoss$R'
+[diamond_trainer.metrics]
+accuracy = '$M$ignite.metrics.Accuracy'
+f1macro = '1$M$ignite.metrics.Fbeta$I'
+confusion_matrix = '10$M$ignite.metrics.ConfusionMatrix$I'
+recall = '$M$ignite.metrics.Recall'
+precision = '$M$ignite.metrics.Precision'
+[diamond_trainer.optimizer]
+reference = "torch.optim.AdamW$R"
+[diamond_trainer.optimizer.kwargs]
+lr = 1e-3
+amsgrad = true
+[diamond_trainer.optimizer.lr_scheduler]
+reference = 'torch.optim.lr_scheduler.ReduceLROnPlateau$R'
+[diamond_trainer.optimizer.lr_scheduler.kwargs]
+patience = 20
+factor = 0.85
+verbose = true
+cooldown = 20
+threshold = 1e-7
+mode = "min"
+min_lr = 1e-6
